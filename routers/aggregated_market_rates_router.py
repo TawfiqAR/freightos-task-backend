@@ -17,6 +17,13 @@ router = APIRouter(
     tags=["aggregated_market_rates"],
 )
 
+@router.get("/")
+def get_all(db: Session = Depends(get_db)):
+    result = db.execute(select(AggregatedMarketRateModel)).all()
+    data = [dict(row._asdict()) for row in result]
+    return data
+
+
 @router.get("/generate")
 def generate(db: Session = Depends(get_db)):
     generate_aggregated_market_rates(db)
@@ -24,24 +31,20 @@ def generate(db: Session = Depends(get_db)):
 
 @router.get("/calculate_savings/")
 def calculate_savings(db: Session = Depends(get_db)):
-    # Fetch Aggregated Market Rates from Database
     aggregated_data = db.execute(select(AggregatedMarketRateModel)).scalars().all()
-
-    # Fetch User Rates from Database
     user_rates = db.execute(select(UserRateModel)).scalars().all()
 
     results = []
 
-    # Iterate over user rates and find matching market data
     for user_rate in user_rates:
-        # Find the market data that matches the same origin and destination
+        # Find all market data matching the same origin and destination
         matching_market_data = [
             market for market in aggregated_data
             if market.origin == user_rate.origin and market.destination == user_rate.destination
         ]
 
-        if matching_market_data:
-            market = matching_market_data[0]  # Assuming single match
+        # Process each matching market data
+        for market in matching_market_data:
             savings = {}
 
             # Calculate savings for each price percentile
@@ -50,7 +53,7 @@ def calculate_savings(db: Session = Depends(get_db)):
                 potential_savings = (market_price - user_rate.price) * user_rate.annual_volume if user_rate.annual_volume else Decimal(0)
                 savings[f"potential_savings_{price_type}"] = f"${potential_savings:,.2f}"
 
-            # Add the result
+            # Append result for each market entry
             results.append({
                 "date": market.date.strftime('%Y-%m-%d'),
                 "origin": user_rate.origin,
@@ -60,7 +63,7 @@ def calculate_savings(db: Session = Depends(get_db)):
                 "percentile_10_price": f"${market.percentile_10_price:,.2f}",
                 "median_price": f"${market.median_price:,.2f}",
                 "percentile_90_price": f"${market.percentile_90_price:,.2f}",
-                **savings  # Add the calculated savings to the result
+                **savings
             })
 
     return results
