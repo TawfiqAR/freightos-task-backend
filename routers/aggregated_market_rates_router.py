@@ -31,6 +31,9 @@ def generate(db: Session = Depends(get_db)):
 
 @router.get("/calculate_savings/")
 def calculate_savings(db: Session = Depends(get_db)):
+    """
+    Calculate the percentile savings by comparing user data to aggregated data
+    """
     aggregated_data = db.execute(select(AggregatedMarketRateModel)).scalars().all()
     user_rates = db.execute(select(UserRateModel)).scalars().all()
 

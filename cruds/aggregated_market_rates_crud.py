@@ -4,6 +4,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 def generate_aggregated_market_rates(db: Session):
+    """
+    Generate aggregated market rates from existing market rates
+    """
     try:
         query = "SELECT date, origin, destination, price FROM price_benchmark.market_rates"
         df = pd.read_sql(query, db.bind)
